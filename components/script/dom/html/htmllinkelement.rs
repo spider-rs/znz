@@ -504,7 +504,7 @@ impl HTMLLinkElement {
     }
 
     /// <https://html.spec.whatwg.org/multipage/#create-link-options-from-element>
-    fn processing_options(&self) -> LinkProcessingOptions {
+    fn processing_options(&self) -> Option<LinkProcessingOptions> {
         let element = self.upcast::<Element>();
 
         // Step 1. Let document be el's node document.
@@ -547,10 +547,13 @@ impl HTMLLinkElement {
         }
 
         // Step 6. Assert: options's href is not the empty string, or options's source set is not null.
-        assert!(!options.href.is_empty() || options.source_set.is_some());
+        // Gracefully return None instead of panicking on malformed <link> elements.
+        if options.href.is_empty() && options.source_set.is_none() {
+            return None;
+        }
 
         // Step 7. Return options.
-        options
+        Some(options)
     }
 
     /// <https://html.spec.whatwg.org/multipage/#default-fetch-and-process-the-linked-resource>
@@ -559,7 +562,7 @@ impl HTMLLinkElement {
     /// as the fetch context that should be used depends on the link type.
     fn default_fetch_and_process_the_linked_resource(&self) -> Option<RequestBuilder> {
         // Step 1. Let options be the result of creating link options from el.
-        let options = self.processing_options();
+        let options = self.processing_options()?;
 
         // Step 2. Let request be the result of creating a link request given options.
         let Some(request) = options.create_link_request(self.owner_window().webview_id()) else {
@@ -630,7 +633,9 @@ impl HTMLLinkElement {
         }
 
         // Step 2. Let options be the result of creating link options from el.
-        let mut options = self.processing_options();
+        let Some(mut options) = self.processing_options() else {
+            return;
+        };
 
         // Step 3. Set options's destination to the empty string.
         options.destination = Destination::None;
@@ -905,7 +910,9 @@ impl HTMLLinkElement {
         // Step 1. Update the source set for el.
         // TODO
         // Step 2. Let options be the result of creating link options from el.
-        let mut options = self.processing_options();
+        let Some(mut options) = self.processing_options() else {
+            return;
+        };
         // Step 3. Let destination be the result of translating the keyword
         // representing the state of el's as attribute.
         let Some(destination) = self.compute_destination_for_attribute() else {
