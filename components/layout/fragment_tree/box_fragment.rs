@@ -263,7 +263,7 @@ impl BoxFragment {
     /// containing block.
     pub fn scrollable_overflow(&self) -> PhysicalRect<Au> {
         self.scrollable_overflow
-            .expect("Should only call `scrollable_overflow()` after calculating overflow")
+            .unwrap_or_else(|| self.padding_rect())
     }
 
     /// This is an implementation of:
